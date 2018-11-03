@@ -8,10 +8,10 @@ require 'rspec/collection_matchers'
 describe OracleOfBacon do
   before(:all) { FakeWeb.allow_net_connect = false }
   describe 'instance' do
-    before(:each) { @orb = OracleOfBacon.new('38b99ce9ec87') }
+    before(:each) { @orb = OracleOfBacon.new('fake_api_key') }
     describe 'when new' do
       subject { @orb }
-      xit { should_not be_valid }
+      it { should_not be_valid }
     end
     describe 'when only From is specified' do
       subject { @orb.from = 'Carrie Fisher' ; @orb }
@@ -34,7 +34,7 @@ describe OracleOfBacon do
       end
       context 'and the same' do
         subject {  @orb.to = @orb.from = 'Ian McKellen' ; @orb }
-        it { should be_valid }
+        it { should_not be_valid }
       end
     end
   end
@@ -48,7 +48,7 @@ describe OracleOfBacon do
       subject { OracleOfBacon::Response.new(File.read 'spec/graph_example.xml') }
       its(:type) { should == :graph }
       its(:data) { should == ['Carrie Fisher', 'Under the Rainbow (1981)',
-                              'Chevy Chase', 'Doogal (2006)', 'Ian McKellen'] }
+                              'Chevy Chase', 'Doogal (2006)', 'Ian McKellen']}
     end
     describe 'for a normal match (backup)' do
       subject { OracleOfBacon::Response.new(File.read 'spec/graph_example2.xml') }
@@ -69,7 +69,7 @@ describe OracleOfBacon do
       its(:data) { should match /unknown/i }
     end
   end
-  describe 'constructing URI' do
+  describe 'constructing URI'  do
     subject do
       oob = OracleOfBacon.new('fake_key')
       oob.from = '3%2 "a' ; oob.to = 'George Clooney'
@@ -81,7 +81,7 @@ describe OracleOfBacon do
     it { should match /b=George\+Clooney/ }
     it { should match /a=3%252\+%22a/ }
   end
-  describe 'service connection', :pending => true do
+  describe 'service connection' do
     before(:each) do
       @oob = OracleOfBacon.new
       allow(@oob).to receive(:valid?).and_return(true)
@@ -94,11 +94,10 @@ describe OracleOfBacon do
     end
     it 'should raise OracleOfBacon::NetworkError if network problem' do
       FakeWeb.register_uri(:get, %r(http://oracleofbacon\.org),
-        :exception => Timeout::Error)
+                           :exception => Timeout::Error)
       lambda { @oob.find_connections }.
-        should raise_error(OracleOfBacon::NetworkError)
+          should raise_error(OracleOfBacon::NetworkError)
     end
   end
 
 end
-      

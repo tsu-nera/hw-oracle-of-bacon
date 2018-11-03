@@ -6,13 +6,13 @@ require 'active_model'          # for validations
 
 class OracleOfBacon
 
-  class InvalidError < RuntimeError ; end
-  class NetworkError < RuntimeError ; end
-  class InvalidKeyError < RuntimeError ; end
+  class InvalidError < RuntimeError; end
+  class NetworkError < RuntimeError; end
+  class InvalidKeyError < RuntimeError; end
 
   attr_accessor :from, :to
   attr_reader :api_key, :response, :uri
-  
+
   include ActiveModel::Validations
   validates_presence_of :from
   validates_presence_of :to
@@ -20,13 +20,14 @@ class OracleOfBacon
   validate :from_does_not_equal_to
 
   def from_does_not_equal_to
-    from != to
+    errors.add(:from, 'From cannot be the same as To') if @from == @to
   end
 
   def initialize(api_key='')
+    @errors = ActiveModel::Errors.new(self)
     @api_key = api_key
-    @from = "Kevin Bacon"
-    @to = "Kevin Bacon"
+    @from = 'Kevin Bacon'
+    @to = 'Kevin Bacon'
   end
 
   def find_connections
@@ -34,13 +35,13 @@ class OracleOfBacon
     begin
       xml = URI.parse(uri).read
     rescue Timeout::Error, Errno::EINVAL, Errno::ECONNRESET, EOFError,
-      Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError,
-      Net::ProtocolError => e
+        Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError,
+        Net::ProtocolError => e
       # convert all of these into a generic OracleOfBacon::NetworkError,
       #  but keep the original error message
-      # your code here
+      raise NetworkError
     end
-    # your code here: create the OracleOfBacon::Response object
+    OracleOfBacon::Response.new(xml)
   end
 
   def make_uri_from_arguments
@@ -49,7 +50,7 @@ class OracleOfBacon
     to = CGI.escape(@to)
     @uri = "http://oracleofbacon.org/cgi-bin/xml?p=#{api_key}&a=#{from}&b=#{to}"
   end
-      
+
   class Response
     attr_reader :type, :data
     # create a Response object from a string of XML markup.
@@ -65,12 +66,12 @@ class OracleOfBacon
         parse_error_response
       elsif ! @doc.xpath('//link').empty?
         @type = :graph
-        movies = @doc.xpath('//link//movie').map(&:text)
-        actors = @doc.xpath('//link//actor').map(&:text)
-        @data = actors.zip(movies).flatten.compact
+        movies = @doc.xpath('//link//movie').map {|x| x.content}
+        actors = @doc.xpath('//link//actor').map {|x| x.content}
+        @data = actors.zip(movies).flatten().compact()
       elsif ! @doc.xpath('//spellcheck').empty?
         @type = :spellcheck
-        @data = @doc.xpath('//spellcheck//match').map(&:text)
+        @data = @doc.xpath('//spellcheck//match').map {|x| x.content}
       else
         @type = :unknown
         @data = 'unknown response type'
@@ -83,4 +84,3 @@ class OracleOfBacon
     end
   end
 end
-

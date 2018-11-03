@@ -44,8 +44,10 @@ class OracleOfBacon
   end
 
   def make_uri_from_arguments
-    # your code here: set the @uri attribute to properly-escaped URI
-    #   constructed from the @from, @to, @api_key arguments
+    api_key = CGI.escape(@api_key)
+    from = CGI.escape(@from)
+    to = CGI.escape(@to)
+    @uri = "http://oracleofbacon.org/cgi-bin/xml?p=#{api_key}&a=#{from}&b=#{to}"
   end
       
   class Response
@@ -61,11 +63,20 @@ class OracleOfBacon
     def parse_response
       if ! @doc.xpath('/error').empty?
         parse_error_response
-      # your code here: 'elsif' clauses to handle other responses
-      # for responses not matching the 3 basic types, the Response
-      # object should have type 'unknown' and data 'unknown response'         
+      elsif ! @doc.xpath('//link').empty?
+        @type = :graph
+        movies = @doc.xpath('//link//movie').map(&:text)
+        actors = @doc.xpath('//link//actor').map(&:text)
+        @data = actors.zip(movies).flatten.compact
+      elsif ! @doc.xpath('//spellcheck').empty?
+        @type = :spellcheck
+        @data = @doc.xpath('//spellcheck//match').map(&:text)
+      else
+        @type = :unknown
+        @data = 'unknown response type'
       end
     end
+
     def parse_error_response
       @type = :error
       @data = 'Unauthorized access'
